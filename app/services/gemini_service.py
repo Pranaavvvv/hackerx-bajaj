@@ -8,7 +8,7 @@ class GeminiPolicyProcessor:
         if not settings.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
         self.embedding_model = 'models/text-embedding-004'
 
     def _parse_json_response(self, text: str) -> dict:
@@ -132,29 +132,20 @@ class GeminiPolicyProcessor:
         return self._parse_json_response(response.text)
 
     async def generate_answer_from_context(self, question: str, context_chunks: list[str]) -> str:
-        """Generates a structured, formal answer to an insurance policy question based on provided context.
+        """Generates a direct, concise answer to an insurance policy question based on provided context.
         
         Returns:
-            str: A well-formatted answer with policy details, conditions, and references.
+            str: A clear, direct answer to the question.
         """
         context_text = "\n".join(context_chunks)
-        prompt = f"""You are an expert insurance policy analyst. Provide a clear, formal answer to the question based EXCLUSIVELY on the provided policy document context.
-        
+        prompt = f"""You are an expert insurance policy analyst. Provide a clear, direct answer to the question based EXCLUSIVELY on the provided policy document context.
+
 INSTRUCTIONS:
-1. Answer in complete, grammatically correct sentences.
+1. Answer in 1-3 complete, grammatically correct sentences.
 2. Be precise and avoid vague language (no "might be" or "could be").
-3. Include specific policy terms, conditions, and limitations.
+3. Include only the most relevant policy terms and conditions.
 4. Format numbers and dates consistently (e.g., "thirty (30) days").
 5. If information is not found in the context, state: "This information is not specified in the provided policy document."
-        
-STRUCTURE YOUR ANSWER AS FOLLOWS:
-[Summary] A brief, direct answer to the question.
-
-[Conditions] Any applicable conditions, waiting periods, or requirements.
-
-[Limitations] Any coverage limits, sub-limits, or exclusions.
-
-[Reference] The specific section or clause from the policy document, if available.
 
 Question: {question}
 
@@ -163,17 +154,20 @@ Policy Document Context:
 {context_text}
 ---
 
-Provide your response in the specified format. Only include information that is explicitly stated in the context."""
+Provide a direct, concise answer without section headers or formatting. Only include information that is explicitly stated in the context."""
         
         try:
             response = await self.model.generate_content_async(
                 prompt,
                 generation_config={
-                    "temperature": 0.2,  # Lower temperature for more focused, deterministic responses
+                    "temperature": 0.2,
                     "top_p": 0.8,
-                    "max_output_tokens": 1024,
+                    "max_output_tokens": 512,  # Reduced for more concise answers
                 }
             )
-            return response.text.strip()
+            # Clean up any remaining section headers or formatting
+            answer = response.text.strip()
+            answer = re.sub(r'\[.*?\]\s*', '', answer)  # Remove any [Section] headers
+            return answer
         except Exception as e:
             return f"Error generating response: {str(e)}"
