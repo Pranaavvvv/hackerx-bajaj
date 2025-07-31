@@ -1,0 +1,24 @@
+# Core Backend
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+requests
+
+# Google + Vector DB
+google-generativeai
+
+# Vector Store
+faiss-cpu
+
+# Document Processing
+pypdf
+python-docx
+python-docx
+pytesseract
+Pillow
+langdetect
+
+# Database
+psycopg2-binary
